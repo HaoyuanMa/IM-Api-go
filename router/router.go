@@ -2,7 +2,7 @@ package router
 
 import (
 	"Api-go/handler/account"
-	"Api-go/middleware"
+	"Api-go/handler/socket"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,7 +10,7 @@ func InitRouter() {
 	gin.SetMode("debug")
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(middleware.CORSMiddleware())
+	//r.Use(middleware.CORSMiddleware())
 
 	var user = r.Group("account")
 	{
@@ -18,12 +18,12 @@ func InitRouter() {
 		user.POST("/login", account.Login)
 	}
 
-	var auth = r.Group("api")
-	auth.Use(middleware.AuthMiddleware())
+	var auth = r.Group("status")
+	//auth.Use(middleware.AuthMiddleware())
 	{
-
+		auth.GET("/buildConnection", socket.BuildConnection)
+		//auth.GET("/setOnline",status.SetOnline)
 	}
 
 	_ = r.Run(":5202")
 }
-

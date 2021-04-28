@@ -14,7 +14,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		_,tokenValidated := lib.ParserToken(token)
+		_, tokenValidated := lib.ParserToken(token)
 
 		if !tokenValidated {
 			c.JSON(401, gin.H{
@@ -27,4 +27,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func AuthUser(token string) (string, bool) {
+	user, tokenValidated := lib.ParserToken(token)
+	return user, tokenValidated
 }

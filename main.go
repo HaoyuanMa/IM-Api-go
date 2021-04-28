@@ -11,6 +11,7 @@ func main() {
 
 	db := lib.DBConn()
 	_ = db.AutoMigrate(&model.User{})
-
+	//go socket.SendToAll(socket.ChatChan)
 	router.InitRouter()
+
 }
