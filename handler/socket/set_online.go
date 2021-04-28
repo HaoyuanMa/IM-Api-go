@@ -82,7 +82,6 @@ func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
 
 func getChatUsers() []string {
 	users := make([]string, 0, 1000)
-	//i := 0
 	for user := range ChatUsers {
 		users = append(users, user)
 	}
@@ -90,21 +89,17 @@ func getChatUsers() []string {
 }
 
 func getBroadcastUsers() []string {
-	var users []string
-	i := 0
+	users := make([]string, 0, 1000)
 	for user := range BroadcastUsers {
-		users[i] = user
-		i++
+		users = append(users, user)
 	}
 	return users
 }
 
 func getChatRoomUsers() []string {
-	var users []string
-	i := 0
+	users := make([]string, 0, 1000)
 	for user := range ChatRoomUsers {
-		users[i] = user
-		i++
+		users = append(users, user)
 	}
 	return users
 }

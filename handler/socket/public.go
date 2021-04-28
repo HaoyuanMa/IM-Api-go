@@ -44,7 +44,20 @@ func BuildConnection(c *gin.Context) {
 }
 
 func Listen(ws *websocket.Conn) {
+	//lastPongTime := time.Now()
 	for {
+		//心跳检测
+		//if time.Now().Sub(lastPongTime) > time.Second*10 {
+		//
+		//}
+		//if time.Now().Sub(lastPongTime) > time.Second*5{
+		//
+		//}
+		//ws.SetPongHandler(func(appData string) error {
+		//	lastPongTime = time.Now()
+		//	return nil
+		//})
+
 		mt, message, err := ws.ReadMessage()
 		if err != nil {
 			break
@@ -72,6 +85,42 @@ func Listen(ws *websocket.Conn) {
 				continue
 			} else {
 				log.Printf("%s is listening\n", user)
+				ws.SetCloseHandler(func(code int, text string) error {
+					//remove User
+					callBack := ClientCallBack{
+						Method: "RemoveUsers",
+						Params: []string{user},
+					}
+					if _, ok := ChatUsers[user]; ok {
+						delete(ChatUsers, user)
+						for user := range ChatUsers {
+							err := ChatUsers[user].WriteJSON(callBack)
+							if err != nil {
+								log.Printf("client.WriteJSON error: %v", err)
+							}
+						}
+					}
+					if _, ok := BroadcastUsers[user]; ok {
+						delete(BroadcastUsers, user)
+						for user := range BroadcastUsers {
+							err := BroadcastUsers[user].WriteJSON(callBack)
+							if err != nil {
+								log.Printf("client.WriteJSON error: %v", err)
+							}
+						}
+					}
+					if _, ok := ChatRoomUsers[user]; ok {
+						delete(ChatRoomUsers, user)
+						for user := range ChatRoomUsers {
+							err := ChatRoomUsers[user].WriteJSON(callBack)
+							if err != nil {
+								log.Printf("client.WriteJSON error: %v", err)
+							}
+						}
+					}
+					log.Printf("%s close", user)
+					return nil
+				})
 				switch call.Method {
 				case "setOnline":
 					SetOnline(ws, user, call.Params)
