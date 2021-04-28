@@ -22,11 +22,12 @@ func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
 					delete(ChatUsers, user)
 				}
 			}
+			ChatUsers[userName] = ws
 			ws.WriteJSON(ClientCallBack{
 				Method: "GetChatUsers",
 				Params: getChatUsers(),
 			})
-			ChatUsers[userName] = ws
+
 		}
 		break
 	case "broadcast":
@@ -44,12 +45,12 @@ func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
 					delete(BroadcastUsers, user)
 				}
 			}
-
+			BroadcastUsers[userName] = ws
 			ws.WriteJSON(ClientCallBack{
 				Method: "GetChatUsers",
 				Params: getBroadcastUsers(),
 			})
-			BroadcastUsers[userName] = ws
+
 		}
 		break
 	case "chatroom":
@@ -67,12 +68,12 @@ func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
 					delete(ChatRoomUsers, user)
 				}
 			}
-
+			ChatRoomUsers[userName] = ws
 			ws.WriteJSON(ClientCallBack{
 				Method: "GetChatUsers",
 				Params: getChatRoomUsers(),
 			})
-			ChatRoomUsers[userName] = ws
+
 		}
 		break
 	default:

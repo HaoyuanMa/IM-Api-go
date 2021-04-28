@@ -8,17 +8,6 @@ import (
 	"log"
 )
 
-type ClientCallBack struct {
-	Method string      `json:"method"`
-	Params interface{} `json:"params"`
-}
-
-var (
-	ChatChan      = make(chan ClientCallBack)
-	BroadcastChan = make(chan ClientCallBack)
-	ChatRoomChan  = make(chan ClientCallBack)
-)
-
 var (
 	ChatUsers      = make(map[string]*websocket.Conn)
 	BroadcastUsers = make(map[string]*websocket.Conn)
@@ -30,9 +19,20 @@ type ClientCall struct {
 	Params map[string]string `json:"params"`
 }
 
-var (
-	Users = make(map[string]*websocket.Conn)
-)
+type ClientCallBack struct {
+	Method string      `json:"method"`
+	Params interface{} `json:"params"`
+}
+
+//var (
+//	ChatChan      = make(chan ClientCallBack)
+//	BroadcastChan = make(chan ClientCallBack)
+//	ChatRoomChan  = make(chan ClientCallBack)
+//)
+//
+//var (
+//	Users = make(map[string]*websocket.Conn)
+//)
 
 func BuildConnection(c *gin.Context) {
 	ws, err := lib.UpGrader.Upgrade(c.Writer, c.Request, nil)
@@ -64,6 +64,7 @@ func Listen(ws *websocket.Conn) {
 		}
 		if mt == websocket.TextMessage {
 			var call ClientCall
+			//token valid
 			if err := json.Unmarshal([]byte(string(message)), &call); err != nil {
 				err := ws.WriteMessage(mt, []byte("Unmarshal Failed"))
 				if err != nil {
@@ -85,11 +86,13 @@ func Listen(ws *websocket.Conn) {
 				continue
 			} else {
 				log.Printf("%s is listening\n", user)
+
+				//disconnection callback
 				ws.SetCloseHandler(func(code int, text string) error {
 					//remove User
 					callBack := ClientCallBack{
-						Method: "RemoveUsers",
-						Params: []string{user},
+						Method: "RemoveUser",
+						Params: user,
 					}
 					if _, ok := ChatUsers[user]; ok {
 						delete(ChatUsers, user)
@@ -121,6 +124,7 @@ func Listen(ws *websocket.Conn) {
 					log.Printf("%s close", user)
 					return nil
 				})
+				//listen client func call
 				switch call.Method {
 				case "setOnline":
 					SetOnline(ws, user, call.Params)
