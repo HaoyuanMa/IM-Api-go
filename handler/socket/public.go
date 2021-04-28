@@ -14,6 +14,14 @@ var (
 	ChatRoomUsers  = make(map[string]*websocket.Conn)
 )
 
+type Message struct {
+	Type        string   `json:"type"`
+	From        string   `json:"from"`
+	To          []string `json:"to"`
+	ContentType string   `json:"contentType"`
+	Content     string   `json:"content"`
+}
+
 type ClientCall struct {
 	Method string            `json:"method"`
 	Params map[string]string `json:"params"`
@@ -126,10 +134,12 @@ func Listen(ws *websocket.Conn) {
 				})
 				//listen client func call
 				switch call.Method {
-				case "setOnline":
+				case "SetOnline":
 					SetOnline(ws, user, call.Params)
 					break
-
+				case "SendMessage":
+					SendMessage(ws, user, call.Params)
+					break
 				default:
 					break
 				}
