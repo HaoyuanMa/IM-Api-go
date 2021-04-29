@@ -48,10 +48,12 @@ func BuildConnection(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	go Listen(ws)
+	token := c.Query("token")
+	user, _ := lib.ParserToken(token)
+	go Listen(ws, user)
 }
 
-func Listen(ws *websocket.Conn) {
+func Listen(ws *websocket.Conn, user string) {
 	//lastPongTime := time.Now()
 	for {
 		//心跳检测
@@ -80,69 +82,55 @@ func Listen(ws *websocket.Conn) {
 				}
 				continue
 			}
-			if token, ok := call.Params["token"]; !ok {
-				err := ws.WriteMessage(mt, []byte("NotFound Token"))
-				if err != nil {
-					break
-				}
-				continue
-			} else if user, valided := lib.ParserToken(token); !valided {
-				err := ws.WriteMessage(mt, []byte("Token Error"))
-				if err != nil {
-					break
-				}
-				continue
-			} else {
-				log.Printf("%s is listening\n", user)
+			log.Printf("%s is listening\n", user)
 
-				//disconnection callback
-				ws.SetCloseHandler(func(code int, text string) error {
-					//remove User
-					callBack := ClientCallBack{
-						Method: "RemoveUser",
-						Params: user,
-					}
-					if _, ok := ChatUsers[user]; ok {
-						delete(ChatUsers, user)
-						for user := range ChatUsers {
-							err := ChatUsers[user].WriteJSON(callBack)
-							if err != nil {
-								log.Printf("client.WriteJSON error: %v", err)
-							}
-						}
-					}
-					if _, ok := BroadcastUsers[user]; ok {
-						delete(BroadcastUsers, user)
-						for user := range BroadcastUsers {
-							err := BroadcastUsers[user].WriteJSON(callBack)
-							if err != nil {
-								log.Printf("client.WriteJSON error: %v", err)
-							}
-						}
-					}
-					if _, ok := ChatRoomUsers[user]; ok {
-						delete(ChatRoomUsers, user)
-						for user := range ChatRoomUsers {
-							err := ChatRoomUsers[user].WriteJSON(callBack)
-							if err != nil {
-								log.Printf("client.WriteJSON error: %v", err)
-							}
-						}
-					}
-					log.Printf("%s close", user)
-					return nil
-				})
-				//listen client func call
-				switch call.Method {
-				case "SetOnline":
-					SetOnline(ws, user, call.Params)
-					break
-				case "SendMessage":
-					SendMessage(ws, user, call.Params)
-					break
-				default:
-					break
+			//disconnection callback
+			ws.SetCloseHandler(func(code int, text string) error {
+				//remove User
+				callBack := ClientCallBack{
+					Method: "RemoveUser",
+					Params: user,
 				}
+				if _, ok := ChatUsers[user]; ok {
+					delete(ChatUsers, user)
+					for user := range ChatUsers {
+						err := ChatUsers[user].WriteJSON(callBack)
+						if err != nil {
+							log.Printf("client.WriteJSON error: %v", err)
+						}
+					}
+				}
+				if _, ok := BroadcastUsers[user]; ok {
+					delete(BroadcastUsers, user)
+					for user := range BroadcastUsers {
+						err := BroadcastUsers[user].WriteJSON(callBack)
+						if err != nil {
+							log.Printf("client.WriteJSON error: %v", err)
+						}
+					}
+				}
+				if _, ok := ChatRoomUsers[user]; ok {
+					delete(ChatRoomUsers, user)
+					for user := range ChatRoomUsers {
+						err := ChatRoomUsers[user].WriteJSON(callBack)
+						if err != nil {
+							log.Printf("client.WriteJSON error: %v", err)
+						}
+					}
+				}
+				log.Printf("%s close", user)
+				return nil
+			})
+			//listen client func call
+			switch call.Method {
+			case "SetOnline":
+				SetOnline(ws, user, call.Params)
+				break
+			case "SendMessage":
+				SendMessage(ws, user, call.Params)
+				break
+			default:
+				break
 			}
 		}
 	}

@@ -2,7 +2,6 @@ package lib
 
 import (
 	"github.com/dgrijalva/jwt-go"
-	"strings"
 )
 
 var jwtKey = []byte("jsldkjfeljsflskjf")
@@ -21,13 +20,9 @@ func CreateToken(userName string) string {
 	return tokenString
 }
 
-func ParserToken(tokenHeader string) (string, bool) {
-	checkToken := strings.Split(tokenHeader, " ")
+func ParserToken(tokenStr string) (string, bool) {
 
-	if len(checkToken) != 2 || checkToken[0] != "Bearer" {
-		return "", false
-	}
-	var token, err = jwt.ParseWithClaims(checkToken[1], &MyClaims{}, func(tk *jwt.Token) (interface{}, error) {
+	var token, err = jwt.ParseWithClaims(tokenStr, &MyClaims{}, func(tk *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil || token == nil {

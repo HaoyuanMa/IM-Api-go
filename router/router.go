@@ -19,8 +19,8 @@ func InitRouter() {
 		user.POST("/Login", account.Login)
 	}
 
-	var auth = r.Group("status")
-	//auth.Use(middleware.AuthMiddleware())
+	var auth = r.Group("Socket")
+	auth.Use(middleware.AuthMiddleware())
 	{
 		auth.GET("/BuildConnection", socket.BuildConnection)
 		//auth.GET("/setOnline",status.SetOnline)

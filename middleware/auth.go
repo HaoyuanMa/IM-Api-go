@@ -3,13 +3,14 @@ package middleware
 import (
 	"Api-go/lib"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.Request.Header.Get("Authorization")
+		token := c.Query("token")
 		if token == "" {
-			//util.LogPrint("info", "middleware", "前端应携带Authorization header却未携带")
+			log.Printf("no token")
 			c.AbortWithStatus(401)
 			return
 		}
@@ -17,6 +18,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		_, tokenValidated := lib.ParserToken(token)
 
 		if !tokenValidated {
+			log.Printf("token error")
 			c.JSON(401, gin.H{
 				"status":  401,
 				"message": "token error",
