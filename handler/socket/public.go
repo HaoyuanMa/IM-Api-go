@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"log"
+	"os"
 )
 
 var (
@@ -55,6 +56,10 @@ func BuildConnection(c *gin.Context) {
 
 func Listen(ws *websocket.Conn, user string) {
 	//lastPongTime := time.Now()
+	log.Printf("%s is listening\n", user)
+	var file *os.File
+	isUploading := false
+	var ByteChan chan []byte
 	for {
 		//心跳检测
 		//if time.Now().Sub(lastPongTime) > time.Second*10 {
@@ -82,7 +87,6 @@ func Listen(ws *websocket.Conn, user string) {
 				}
 				continue
 			}
-			log.Printf("%s is listening\n", user)
 
 			//disconnection callback
 			ws.SetCloseHandler(func(code int, text string) error {
@@ -127,11 +131,69 @@ func Listen(ws *websocket.Conn, user string) {
 				SetOnline(ws, user, call.Params)
 				break
 			case "SendMessage":
-				SendMessage(ws, user, call.Params)
+				go SendMessage(ws, user, call.Params)
+				break
+			case "StartUploadFile":
+				isUploading = true
+				fileName := call.Params["file"]
+				userName := call.Params["user"]
+				fileDir := "C:/Users/mahaoyuan/Desktop/RealTimeWeb/Api-go/UploadFiles/" + userName
+				if _, err := os.Stat(fileDir); os.IsNotExist(err) {
+					_ = os.Mkdir(fileDir, 0666)
+				}
+				fileDir += ("/" + fileName)
+				if _, err := os.Stat(fileDir); !os.IsNotExist(err) {
+					_ = os.Remove(fileDir)
+				}
+				var err error
+				file, err = os.Create(fileDir)
+				if err != nil {
+					break
+				}
+				file.Close()
+				file, err = os.OpenFile(fileDir, os.O_WRONLY|os.O_APPEND, 0666)
+				if err != nil {
+					break
+				}
+				ByteChan = make(chan []byte)
+				go ReceiveFile(file, ByteChan)
+				log.Printf("%s start uploading\n", user)
+				break
+			case "StopUploadFile":
+				isUploading = false
+				close(ByteChan)
+				log.Printf("%s stop uploading\n", user)
 				break
 			default:
 				break
 			}
+		} else if mt == websocket.BinaryMessage && isUploading {
+			ByteChan <- message
 		}
+
 	}
+}
+
+func getChatUsers() []string {
+	users := make([]string, 0, 1000)
+	for user := range ChatUsers {
+		users = append(users, user)
+	}
+	return users
+}
+
+func getBroadcastUsers() []string {
+	users := make([]string, 0, 1000)
+	for user := range BroadcastUsers {
+		users = append(users, user)
+	}
+	return users
+}
+
+func getChatRoomUsers() []string {
+	users := make([]string, 0, 1000)
+	for user := range ChatRoomUsers {
+		users = append(users, user)
+	}
+	return users
 }

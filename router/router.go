@@ -12,6 +12,7 @@ func InitRouter() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSMiddleware())
+	r.Static("/UploadFiles", "C:/Users/mahaoyuan/Desktop/RealTimeWeb/Api-go/UploadFiles/")
 
 	var user = r.Group("Account")
 	{

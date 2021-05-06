@@ -80,27 +80,3 @@ func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
 		return
 	}
 }
-
-func getChatUsers() []string {
-	users := make([]string, 0, 1000)
-	for user := range ChatUsers {
-		users = append(users, user)
-	}
-	return users
-}
-
-func getBroadcastUsers() []string {
-	users := make([]string, 0, 1000)
-	for user := range BroadcastUsers {
-		users = append(users, user)
-	}
-	return users
-}
-
-func getChatRoomUsers() []string {
-	users := make([]string, 0, 1000)
-	for user := range ChatRoomUsers {
-		users = append(users, user)
-	}
-	return users
-}

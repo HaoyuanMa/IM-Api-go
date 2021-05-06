@@ -30,8 +30,3 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-func AuthUser(token string) (string, bool) {
-	user, tokenValidated := lib.ParserToken(token)
-	return user, tokenValidated
-}
