@@ -8,7 +8,7 @@ import (
 func SendMessage(ws *websocket.Conn, userName string, params map[string]string) {
 	msg := params["msg"]
 	var message Message
-	if err := json.Unmarshal([]byte(string(msg)), &message); err != nil {
+	if err := json.Unmarshal([]byte(msg), &message); err != nil {
 		err := ws.WriteMessage(websocket.TextMessage, []byte("Unmarshal Failed"))
 		if err != nil {
 			return

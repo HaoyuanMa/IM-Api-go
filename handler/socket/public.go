@@ -13,6 +13,7 @@ var (
 	ChatUsers      = make(map[string]*websocket.Conn)
 	BroadcastUsers = make(map[string]*websocket.Conn)
 	ChatRoomUsers  = make(map[string]*websocket.Conn)
+	AllUsers       = make(map[string]*websocket.Conn)
 )
 
 type Message struct {
@@ -60,6 +61,10 @@ func Listen(ws *websocket.Conn, user string) {
 	var file *os.File
 	isUploading := false
 	var ByteChan chan []byte
+	StreamChan := make(chan string, 10)
+	//监听处理uploadstream
+	go SendStream(StreamChan)
+
 	for {
 		//心跳检测
 		//if time.Now().Sub(lastPongTime) > time.Second*10 {
@@ -73,15 +78,15 @@ func Listen(ws *websocket.Conn, user string) {
 		//	return nil
 		//})
 
-		mt, message, err := ws.ReadMessage()
+		msgType, message, err := ws.ReadMessage()
 		if err != nil {
 			break
 		}
-		if mt == websocket.TextMessage {
+		if msgType == websocket.TextMessage {
 			var call ClientCall
 			//token valid
 			if err := json.Unmarshal([]byte(string(message)), &call); err != nil {
-				err := ws.WriteMessage(mt, []byte("Unmarshal Failed"))
+				err := ws.WriteMessage(msgType, []byte("Unmarshal Failed"))
 				if err != nil {
 					break
 				}
@@ -91,6 +96,7 @@ func Listen(ws *websocket.Conn, user string) {
 			//disconnection callback
 			ws.SetCloseHandler(func(code int, text string) error {
 				//remove User
+				delete(AllUsers, user)
 				callBack := ClientCallBack{
 					Method: "RemoveUser",
 					Params: user,
@@ -122,6 +128,7 @@ func Listen(ws *websocket.Conn, user string) {
 						}
 					}
 				}
+				close(StreamChan)
 				log.Printf("%s close", user)
 				return nil
 			})
@@ -164,10 +171,16 @@ func Listen(ws *websocket.Conn, user string) {
 				close(ByteChan)
 				log.Printf("%s stop uploading\n", user)
 				break
+			case "UploadStream":
+				if len(StreamChan) == cap(StreamChan) {
+					_ = <-StreamChan
+				}
+				StreamChan <- call.Params["content"]
+				break
 			default:
 				break
 			}
-		} else if mt == websocket.BinaryMessage && isUploading {
+		} else if msgType == websocket.BinaryMessage && isUploading {
 			ByteChan <- message
 		}
 

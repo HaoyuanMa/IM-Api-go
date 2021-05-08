@@ -6,6 +6,9 @@ import (
 )
 
 func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
+	if _, ok := AllUsers[userName]; !ok {
+		AllUsers[userName] = ws
+	}
 	loginType := params["loginType"]
 	switch loginType {
 	case "chat":
