@@ -1,6 +1,7 @@
 package socket
 
 import (
+	. "Api-go/model"
 	"github.com/gorilla/websocket"
 	"log"
 )
@@ -25,7 +26,6 @@ func SetOnline(ws *websocket.Conn, userName string, params map[string]string) {
 					delete(ChatUsers, user)
 				}
 			}
-
 			ws.WriteJSON(ClientCallBack{
 				Method: "GetChatUsers",
 				Params: getChatUsers(),

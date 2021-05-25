@@ -2,6 +2,7 @@ package socket
 
 import (
 	"Api-go/lib"
+	. "Api-go/model"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -15,24 +16,6 @@ var (
 	ChatRoomUsers  = make(map[string]*websocket.Conn)
 	AllUsers       = make(map[string]*websocket.Conn)
 )
-
-type Message struct {
-	Type        string   `json:"type"`
-	From        string   `json:"from"`
-	To          []string `json:"to"`
-	ContentType string   `json:"contentType"`
-	Content     string   `json:"content"`
-}
-
-type ClientCall struct {
-	Method string            `json:"method"`
-	Params map[string]string `json:"params"`
-}
-
-type ClientCallBack struct {
-	Method string      `json:"method"`
-	Params interface{} `json:"params"`
-}
 
 //var (
 //	ChatChan      = make(chan ClientCallBack)
@@ -65,74 +48,65 @@ func Listen(ws *websocket.Conn, user string) {
 	//监听处理uploadstream
 	go SendStream(StreamChan)
 
-	for {
-		//心跳检测
-		//if time.Now().Sub(lastPongTime) > time.Second*10 {
-		//
-		//}
-		//if time.Now().Sub(lastPongTime) > time.Second*5{
-		//
-		//}
-		//ws.SetPongHandler(func(appData string) error {
-		//	lastPongTime = time.Now()
-		//	return nil
-		//})
+	ws.SetCloseHandler(func(code int, text string) error {
+		//remove User
+		delete(AllUsers, user)
+		callBack := ClientCallBack{
+			Method: "RemoveUser",
+			Params: user,
+		}
+		if _, ok := ChatUsers[user]; ok {
+			delete(ChatUsers, user)
+			for user := range ChatUsers {
+				err := ChatUsers[user].WriteJSON(callBack)
+				if err != nil {
+					log.Printf("client.WriteJSON error: %v", err)
+				}
+			}
+		}
+		if _, ok := BroadcastUsers[user]; ok {
+			delete(BroadcastUsers, user)
+			for user := range BroadcastUsers {
+				err := BroadcastUsers[user].WriteJSON(callBack)
+				if err != nil {
+					log.Printf("client.WriteJSON error: %v", err)
+				}
+			}
+		}
+		if _, ok := ChatRoomUsers[user]; ok {
+			delete(ChatRoomUsers, user)
+			for user := range ChatRoomUsers {
+				err := ChatRoomUsers[user].WriteJSON(callBack)
+				if err != nil {
+					log.Printf("client.WriteJSON error: %v", err)
+				}
+			}
+		}
+		close(StreamChan)
+		log.Printf("%s close", user)
+		return nil
+	})
 
+	//循环接收客户端消息
+	for {
+		//读取消息
 		msgType, message, err := ws.ReadMessage()
 		if err != nil {
 			break
 		}
+		//若消息类型为文本消息（Json字符串）
 		if msgType == websocket.TextMessage {
 			var call ClientCall
-			//token valid
-			if err := json.Unmarshal([]byte(string(message)), &call); err != nil {
-				err := ws.WriteMessage(msgType, []byte("Unmarshal Failed"))
-				if err != nil {
+			//反序列化
+			err = json.Unmarshal([]byte(string(message)), &call)
+			if err != nil {
+				wserr := ws.WriteMessage(msgType, []byte("Unmarshal Failed"))
+				if wserr != nil {
 					break
 				}
 				continue
 			}
-
-			//disconnection callback
-			ws.SetCloseHandler(func(code int, text string) error {
-				//remove User
-				delete(AllUsers, user)
-				callBack := ClientCallBack{
-					Method: "RemoveUser",
-					Params: user,
-				}
-				if _, ok := ChatUsers[user]; ok {
-					delete(ChatUsers, user)
-					for user := range ChatUsers {
-						err := ChatUsers[user].WriteJSON(callBack)
-						if err != nil {
-							log.Printf("client.WriteJSON error: %v", err)
-						}
-					}
-				}
-				if _, ok := BroadcastUsers[user]; ok {
-					delete(BroadcastUsers, user)
-					for user := range BroadcastUsers {
-						err := BroadcastUsers[user].WriteJSON(callBack)
-						if err != nil {
-							log.Printf("client.WriteJSON error: %v", err)
-						}
-					}
-				}
-				if _, ok := ChatRoomUsers[user]; ok {
-					delete(ChatRoomUsers, user)
-					for user := range ChatRoomUsers {
-						err := ChatRoomUsers[user].WriteJSON(callBack)
-						if err != nil {
-							log.Printf("client.WriteJSON error: %v", err)
-						}
-					}
-				}
-				close(StreamChan)
-				log.Printf("%s close", user)
-				return nil
-			})
-			//listen client func call
+			//匹配客户端调用的方法去执行
 			switch call.Method {
 			case "SetOnline":
 				SetOnline(ws, user, call.Params)
@@ -157,7 +131,10 @@ func Listen(ws *websocket.Conn, user string) {
 				if err != nil {
 					break
 				}
-				file.Close()
+				err = file.Close()
+				if err != nil {
+					break
+				}
 				file, err = os.OpenFile(fileDir, os.O_WRONLY|os.O_APPEND, 0666)
 				if err != nil {
 					break
@@ -173,8 +150,10 @@ func Listen(ws *websocket.Conn, user string) {
 				break
 			case "UploadStream":
 				if len(StreamChan) == cap(StreamChan) {
+					//若管道已满则丢弃最旧的数据
 					_ = <-StreamChan
 				}
+				//将数据放入管道
 				StreamChan <- call.Params["content"]
 				break
 			default:
